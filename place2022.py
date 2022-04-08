@@ -7,9 +7,13 @@ file = open('2022_place_canvas_history.csv', 'r')
 # read header line
 line = file.readline()
 line = file.readline()
+lineNum = 1
 
 while len(line) > 0:
-    print(line)
+    # print rudimentary loading bar
+    if lineNum % 10000 == 0:
+        print('.', end='')
+
     # parse out each field
     fields = line.split(',')
     # make sure there are enough fields
@@ -32,3 +36,4 @@ while len(line) > 0:
 
     # read the next line
     line = file.readline()
+    lineNum += 1
