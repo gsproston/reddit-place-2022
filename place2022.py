@@ -1,8 +1,10 @@
+import os
 from PIL import Image
 import numpy as np
 
 # open file
-file = open('2022_place_canvas_history.csv', 'r')
+fileName = os.path.join('input', '2022_place_canvas_history.csv')
+file = open(fileName, 'r')
 
 # read header line
 line = file.readline()

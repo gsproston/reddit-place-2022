@@ -1,5 +1,7 @@
 # open file to read from
-fileName = '2022_place_canvas_history'
+import os
+
+fileName = os.path.join('input', '2022_place_canvas_history')
 fileRead = open(fileName + '.csv', 'r')
 
 # read header line
