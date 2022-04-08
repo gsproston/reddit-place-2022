@@ -7,12 +7,15 @@ file = open('2022_place_canvas_history.csv', 'r')
 # read header line
 line = file.readline()
 line = file.readline()
-lineNum = 1
+lineCount = 1
+width = 0
+height = 0
 
 while len(line) > 0:
     # print rudimentary loading bar
-    if lineNum % 10000 == 0:
+    if lineCount % 10000 == 0:
         print('.', end='')
+        lineCount = 0
 
     # parse out each field
     fields = line.split(',')
@@ -34,6 +37,18 @@ while len(line) > 0:
         print("Could not parse co-ordinates")
         break
 
+    # convert to ints
+    x = int(x)
+    y = int(y)
+
+    # calculate the width and height of the canvas
+    if x > width:
+        width = x
+    if y > height:
+        height = y
+
     # read the next line
     line = file.readline()
-    lineNum += 1
+    lineCount += 1
+
+print("Width: "  + x + " Height: " + y)
