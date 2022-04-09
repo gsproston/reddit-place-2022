@@ -41,7 +41,7 @@ def getPixelInfo(infoStr):
         date = datetime.strptime(fields[0], "%Y-%m-%d %H:%M:%S %Z")
 
     userIdHash = fields[1]
-    # get colour information
+    # get colour information, trimming the leading '#'
     colour = int(fields[2][1:], 16)
     # trim the leading '"'
     y = int(fields[3][1:])
@@ -61,7 +61,7 @@ def openNextFile(fileNum):
     return open(fileName, 'r')
 
 def convertCoords(coords):
-    return CANVAS_DIM * coords[0] + 2 * coords[1]
+    return 2 * (CANVAS_DIM * coords[0] + coords[1])
 
 def getDateTime(finalCanvasInfo, coords):
     return finalCanvasInfo[convertCoords(coords) + 1]
@@ -117,7 +117,11 @@ def vMain():
     finalCanvas = [ [(0xFF, 0xFF, 0xFF)] * CANVAS_DIM for i in range(CANVAS_DIM)]
     for i in range(CANVAS_DIM):
         for j in range(CANVAS_DIM):
-            finalCanvas[i][j] = finalCanvasInfo[convertCoords((i, j))]
+            hexColour = finalCanvasInfo[convertCoords((i, j))]
+            r = hexColour >> 16
+            g = (hexColour >> 8) & 0xFF
+            b = hexColour & 0xFF
+            finalCanvas[i][j] = (r, g, b)
 
     # Convert the pixels into an array using numpy
     array = np.array(finalCanvas, dtype=np.uint8)
