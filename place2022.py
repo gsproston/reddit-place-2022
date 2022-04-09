@@ -30,9 +30,9 @@ def getPixelInfo(infoStr):
     g = int(fields[2][3:5], 16)
     b = int(fields[2][5:],  16)
     # trim the leading '"'
-    x = int(fields[3][1:])
+    y = int(fields[3][1:])
     # trim the trailing '"' and '\n'
-    y = int(fields[4][:-2])
+    x = int(fields[4][:-2])
 
     return PixelInfo(date, userIdHash, (r, g, b), (x, y))
 
