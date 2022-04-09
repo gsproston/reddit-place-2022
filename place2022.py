@@ -1,8 +1,19 @@
 from asyncio.windows_events import NULL
+from audioop import mul
+import ctypes
 from datetime import datetime
+import multiprocessing
+from multiprocessing import Value, Array
 import os
+from typing import List
 from PIL import Image
 import numpy as np
+
+FILE_NAME = '2022_place_canvas_history'
+MAX_FILE_NUM = 160
+NUM_THREADS = 4
+# width and height of the canvas
+CANVAS_DIM = 2000
 
 class PixelInfo:
     def __init__(self, date, userIdHash, colour, coords):
@@ -10,6 +21,11 @@ class PixelInfo:
         self.userIdHash = userIdHash
         self.colour = colour
         self.coords = coords
+
+    def getShortDate(self):
+        startTime = datetime(2022, 4, 1, 0, 0, 0)
+        timestampDiff = self.date.timestamp() - startTime.timestamp()
+        return int(timestampDiff * 1000)
 
 def getPixelInfo(infoStr):
     # parse out each field
@@ -26,59 +42,88 @@ def getPixelInfo(infoStr):
 
     userIdHash = fields[1]
     # get colour information
-    r = int(fields[2][1:3], 16)
-    g = int(fields[2][3:5], 16)
-    b = int(fields[2][5:],  16)
+    colour = int(fields[2][1:], 16)
     # trim the leading '"'
     y = int(fields[3][1:])
     # trim the trailing '"' and '\n'
     x = int(fields[4][:-2])
 
-    return PixelInfo(date, userIdHash, (r, g, b), (x, y))
+    return PixelInfo(date, userIdHash, colour, (x, y))
 
-# open file
-fileName = os.path.join('input', '2022_place_canvas_history.csv')
-file = open(fileName, 'r')
+def openNextFile(fileNum):
+    with fileNum.get_lock():
+        if fileNum.value > MAX_FILE_NUM:
+            # silently exit
+            return None
+        fileName = os.path.join('input', FILE_NAME + str(fileNum.value) + '.csv')
+        print(fileNum.value)
+        fileNum.value += 1
+    return open(fileName, 'r')
 
-# read header line
-line = file.readline()
-# read first line of data
-line = file.readline()
-lineCount = 1
+def convertCoords(coords):
+    return CANVAS_DIM * coords[0] + 2 * coords[1]
 
-# width and height of the canvas
-dims = 2000
-# init the canvas as white
-finalCanvasInfo = [ [NULL] * dims for i in range(dims)]
+def getDateTime(finalCanvasInfo, coords):
+    return finalCanvasInfo[convertCoords(coords) + 1]
 
-while len(line) > 0:
-    # print rudimentary loading bar
-    if lineCount % 100000 == 0:
-        print('.', end='')
-        lineCount = 0
-
-    pixelInfo = getPixelInfo(line)
+def setPixelInfo(finalCanvasInfo, pixelInfo):
     if (pixelInfo != NULL):
         x = pixelInfo.coords[0]
         y = pixelInfo.coords[1]
-        # only hold the pixel info if there's no entry or the entry is later
-        if (finalCanvasInfo[x][y] == NULL or 
-            finalCanvasInfo[x][y].date < pixelInfo.date):
-            finalCanvasInfo[x][y] = pixelInfo
+        shortDate = pixelInfo.getShortDate()
+        with finalCanvasInfo.get_lock():
+            # only hold the pixel info if there's no entry or the entry is later
+            if getDateTime(finalCanvasInfo, (x, y)) < shortDate:
+                finalCanvasInfo[convertCoords((x, y))] = pixelInfo.colour
+                finalCanvasInfo[convertCoords((x, y)) + 1] = shortDate
 
-    # read the next line
-    line = file.readline()
-    lineCount += 1
+def threadBody(fileNum, finalCanvasInfo):
+    # open file
+    file = openNextFile(fileNum)
+    while (file != None):
+        # read header line
+        line = file.readline()
+        # read first line of data
+        line = file.readline()
 
-# create canvas of just pixels
-finalCanvas = [ [(0xFF, 0xFF, 0xFF)] * dims for i in range(dims)]
-for i in range(dims):
-    for j in range(dims):
-        if (finalCanvasInfo[i][j] != NULL):
-            finalCanvas[i][j] = finalCanvasInfo[i][j].colour
+        while len(line) > 0:
+            # get the pixel info object from the line
+            pixelInfo = getPixelInfo(line)
+            # set the pixel info in the array
+            setPixelInfo(finalCanvasInfo, pixelInfo)
+            # read the next line
+            line = file.readline()
+        
+        # open file
+        file = openNextFile(fileNum)
 
-# Convert the pixels into an array using numpy
-array = np.array(finalCanvas, dtype=np.uint8)
-# Use PIL to create an image from the new array of pixels
-finalImage = Image.fromarray(array)
-finalImage.save('finalCanvas.png')
+def vMain():
+    fileNum = Value(ctypes.c_uint8, 0)
+    # init the canvas as white
+    finalCanvasInfo = Array(ctypes.c_uint32, [0] * CANVAS_DIM * CANVAS_DIM * 2)
+
+    # start processes
+    processes = []
+    for i in range(NUM_THREADS):
+        process = multiprocessing.Process(target=threadBody, args=(fileNum, finalCanvasInfo))
+        process.start()
+        processes.append(process)
+
+    # join all the processes
+    for process in processes:
+        process.join()
+
+    # create canvas of just pixels
+    finalCanvas = [ [(0xFF, 0xFF, 0xFF)] * CANVAS_DIM for i in range(CANVAS_DIM)]
+    for i in range(CANVAS_DIM):
+        for j in range(CANVAS_DIM):
+            finalCanvas[i][j] = finalCanvasInfo[convertCoords((i, j))]
+
+    # Convert the pixels into an array using numpy
+    array = np.array(finalCanvas, dtype=np.uint8)
+    # Use PIL to create an image from the new array of pixels
+    finalImage = Image.fromarray(array)
+    finalImage.save('finalCanvas.png')
+
+if __name__ == "__main__":
+    vMain()
