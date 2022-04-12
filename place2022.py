@@ -122,7 +122,7 @@ def vMain():
     fileCount = 0
     with alive_bar(MAX_FILE_NUM) as bar:
         while (fileCount < MAX_FILE_NUM):
-            time.sleep(.005)
+            time.sleep(.1)
             with fileNum.get_lock():
                 while fileNum.value > fileCount:
                     fileCount += 1
