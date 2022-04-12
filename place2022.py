@@ -14,6 +14,7 @@ MAX_FILE_NUM = 160
 NUM_THREADS = 8
 # width and height of the canvas
 CANVAS_DIM = 2000
+LAST_DATETIME = datetime(2022, 4, 5, 0, 13, 4)
 
 class PixelInfo:
     def __init__(self, date, userIdHash, colour, coords):
@@ -81,7 +82,8 @@ def threadBody(fileNum, finalCanvasInfo):
             # get the pixel info object from the line
             pixelInfo = getPixelInfo(line)
             # set the pixel info in the array
-            pixelInfos.append(pixelInfo)
+            if pixelInfo.date <= LAST_DATETIME:
+                pixelInfos.append(pixelInfo)
             # read the next line
             line = file.readline()
 
