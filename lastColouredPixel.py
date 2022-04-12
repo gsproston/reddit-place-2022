@@ -22,11 +22,6 @@ class PixelInfo:
         self.colour = colour
         self.coords = coords
 
-    def getShortDate(self):
-        startTime = datetime(2022, 4, 1, 0, 0, 0)
-        timestampDiff = self.date.timestamp() - startTime.timestamp()
-        return int(timestampDiff * 1000)
-
 def getPixelInfo(infoStr):
     # parse out each field
     fields = infoStr.split(',')
@@ -60,26 +55,10 @@ def openNextFile(fileNum):
         fileNum.value += 1
     return open(fileName, 'r')
 
-def convertCoords(coords):
-    return 2 * (CANVAS_DIM * coords[0] + coords[1])
-
-def getDateTime(finalCanvasInfo, coords):
-    return finalCanvasInfo[convertCoords(coords) + 1]
-
-def setPixelInfo(finalCanvasInfo, pixelInfo):
-    if (pixelInfo != NULL):
-        x = pixelInfo.coords[0]
-        y = pixelInfo.coords[1]
-        shortDate = pixelInfo.getShortDate()
-        with finalCanvasInfo.get_lock():
-            # only hold the pixel info if there's no entry or the entry is later
-            if getDateTime(finalCanvasInfo, (x, y)) < shortDate:
-                finalCanvasInfo[convertCoords((x, y))] = pixelInfo.colour
-                finalCanvasInfo[convertCoords((x, y)) + 1] = shortDate
-
-def threadBody(fileNum, finalCanvasInfo):
+def threadBody(fileNum, lastTimestamp):
     # open file
     file = openNextFile(fileNum)
+    lastTimestampTemp = 0.0
     while (file != None):
         # read header line
         line = file.readline()
@@ -89,23 +68,26 @@ def threadBody(fileNum, finalCanvasInfo):
         while len(line) > 0:
             # get the pixel info object from the line
             pixelInfo = getPixelInfo(line)
-            # set the pixel info in the array
-            setPixelInfo(finalCanvasInfo, pixelInfo)
+            if pixelInfo.colour != 0xFFFFF and lastTimestampTemp < pixelInfo.date.timestamp():
+                lastTimestampTemp = pixelInfo.date.timestamp()
             # read the next line
             line = file.readline()
         
         # open file
         file = openNextFile(fileNum)
 
+    with lastTimestamp.get_lock():
+        if lastTimestampTemp > lastTimestamp.value:
+            lastTimestamp.value = lastTimestampTemp    
+
 def vMain():
     fileNum = Value(ctypes.c_uint8, 0)
-    # init the canvas as white
-    finalCanvasInfo = Array(ctypes.c_uint32, [0] * CANVAS_DIM * CANVAS_DIM * 2)
+    lastTimestamp = Value(ctypes.c_float, 0.0)
 
     # start processes
     processes = []
     for i in range(NUM_THREADS):
-        process = multiprocessing.Process(target=threadBody, args=(fileNum, finalCanvasInfo))
+        process = multiprocessing.Process(target=threadBody, args=(fileNum, lastTimestamp))
         process.start()
         processes.append(process)
 
@@ -113,21 +95,9 @@ def vMain():
     for process in processes:
         process.join()
 
-    # create canvas of just pixels
-    finalCanvas = [ [(0xFF, 0xFF, 0xFF)] * CANVAS_DIM for i in range(CANVAS_DIM)]
-    for i in range(CANVAS_DIM):
-        for j in range(CANVAS_DIM):
-            hexColour = finalCanvasInfo[convertCoords((i, j))]
-            r = hexColour >> 16
-            g = (hexColour >> 8) & 0xFF
-            b = hexColour & 0xFF
-            finalCanvas[i][j] = (r, g, b)
-
-    # Convert the pixels into an array using numpy
-    array = np.array(finalCanvas, dtype=np.uint8)
-    # Use PIL to create an image from the new array of pixels
-    finalImage = Image.fromarray(array)
-    finalImage.save('finalCanvas.png')
+    checkDate = datetime.fromtimestamp(lastTimestamp.value)
+    print(lastTimestamp.value)
+    print(checkDate)
 
 if __name__ == "__main__":
     vMain()
