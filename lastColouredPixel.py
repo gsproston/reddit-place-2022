@@ -5,9 +5,11 @@ from datetime import datetime
 import multiprocessing
 from multiprocessing import Value, Array
 import os
+import time
 from typing import List
 from PIL import Image
 import numpy as np
+from alive_progress import alive_bar
 
 FILE_NAME = '2022_place_canvas_history'
 MAX_FILE_NUM = 160
@@ -51,7 +53,6 @@ def openNextFile(fileNum):
             # silently exit
             return None
         fileName = os.path.join('input', FILE_NAME + str(fileNum.value) + '.csv')
-        print(fileNum.value)
         fileNum.value += 1
     return open(fileName, 'r')
 
@@ -90,6 +91,15 @@ def vMain():
         process = multiprocessing.Process(target=threadBody, args=(fileNum, lastTimestamp))
         process.start()
         processes.append(process)
+
+    fileCount = 0
+    with alive_bar(MAX_FILE_NUM) as bar:
+        while (fileCount < MAX_FILE_NUM):
+            time.sleep(.005)
+            with fileNum.get_lock():
+                while fileNum.value > fileCount:
+                    fileCount += 1
+                    bar()
 
     # join all the processes
     for process in processes:
