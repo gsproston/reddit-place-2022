@@ -14,7 +14,7 @@ MAX_FILE_NUM = 160
 NUM_THREADS = 8
 # width and height of the canvas
 CANVAS_DIM = 2000
-LAST_DATETIME = datetime(2022, 4, 5, 0, 13, 4)
+LAST_DATETIME = datetime(2022, 4, 4, 22, 47, 44)
 
 class PixelInfo:
     def __init__(self, date, userIdHash, colour, coords):
@@ -92,11 +92,11 @@ def threadBody(fileNum, finalCanvasInfo):
             # read the next line
             line = file.readline()
 
-        with finalCanvasInfo.get_lock():
-            for x, v in pixelInfos.items():
-                for y, pixelInfo in v.items():
-                    if (pixelInfo != NULL):
-                        shortDate = pixelInfo.getShortDate()
+        for x, v in pixelInfos.items():
+            for y, pixelInfo in v.items():
+                if (pixelInfo != NULL):
+                    shortDate = pixelInfo.getShortDate()
+                    with finalCanvasInfo.get_lock():
                         # only hold the pixel info if there's no entry or the entry is later
                         if getDateTime(finalCanvasInfo, (x, y)) < shortDate:
                             finalCanvasInfo[convertCoords((x, y))] = pixelInfo.colour
