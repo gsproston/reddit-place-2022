@@ -68,7 +68,7 @@ def threadBody(fileNum, lastTimestamp):
         while len(line) > 0:
             # get the pixel info object from the line
             pixelInfo = getPixelInfo(line)
-            if pixelInfo.colour != 0xFFFFF and lastTimestampTemp < pixelInfo.date.timestamp():
+            if pixelInfo.colour != 0xFFFFFF and lastTimestampTemp < pixelInfo.date.timestamp():
                 lastTimestampTemp = pixelInfo.date.timestamp()
             # read the next line
             line = file.readline()
