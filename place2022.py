@@ -66,20 +66,11 @@ def convertCoords(coords):
 def getDateTime(finalCanvasInfo, coords):
     return finalCanvasInfo[convertCoords(coords) + 1]
 
-def setPixelInfo(finalCanvasInfo, pixelInfo):
-    if (pixelInfo != NULL):
-        x = pixelInfo.coords[0]
-        y = pixelInfo.coords[1]
-        shortDate = pixelInfo.getShortDate()
-        with finalCanvasInfo.get_lock():
-            # only hold the pixel info if there's no entry or the entry is later
-            if getDateTime(finalCanvasInfo, (x, y)) < shortDate:
-                finalCanvasInfo[convertCoords((x, y))] = pixelInfo.colour
-                finalCanvasInfo[convertCoords((x, y)) + 1] = shortDate
-
 def threadBody(fileNum, finalCanvasInfo):
     # open file
     file = openNextFile(fileNum)
+    # list of pixel infos
+    pixelInfos = []
     while (file != None):
         # read header line
         line = file.readline()
@@ -90,10 +81,22 @@ def threadBody(fileNum, finalCanvasInfo):
             # get the pixel info object from the line
             pixelInfo = getPixelInfo(line)
             # set the pixel info in the array
-            setPixelInfo(finalCanvasInfo, pixelInfo)
+            pixelInfos.append(pixelInfo)
             # read the next line
             line = file.readline()
+
+        with finalCanvasInfo.get_lock():
+            for pixelInfo in pixelInfos:
+                if (pixelInfo != NULL):
+                    x = pixelInfo.coords[0]
+                    y = pixelInfo.coords[1]
+                    shortDate = pixelInfo.getShortDate()
+                    # only hold the pixel info if there's no entry or the entry is later
+                    if getDateTime(finalCanvasInfo, (x, y)) < shortDate:
+                        finalCanvasInfo[convertCoords((x, y))] = pixelInfo.colour
+                        finalCanvasInfo[convertCoords((x, y)) + 1] = shortDate
         
+        pixelInfos.clear()
         # open file
         file = openNextFile(fileNum)
 
