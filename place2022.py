@@ -71,7 +71,7 @@ def threadBody(fileNum, finalCanvasInfo):
     # open file
     file = openNextFile(fileNum)
     # list of pixel infos
-    pixelInfos = []
+    pixelInfos = {}
     while (file != None):
         # read header line
         line = file.readline()
@@ -82,21 +82,25 @@ def threadBody(fileNum, finalCanvasInfo):
             # get the pixel info object from the line
             pixelInfo = getPixelInfo(line)
             # set the pixel info in the array
+            x = pixelInfo.coords[0]
+            y = pixelInfo.coords[1]
             if pixelInfo.date <= LAST_DATETIME:
-                pixelInfos.append(pixelInfo)
+                if (x not in pixelInfos):
+                    pixelInfos[x] = dict([(y, pixelInfo)])
+                elif y not in pixelInfos[x] or pixelInfos[x][y].date < pixelInfo.date:
+                    pixelInfos[x][y] = pixelInfo
             # read the next line
             line = file.readline()
 
         with finalCanvasInfo.get_lock():
-            for pixelInfo in pixelInfos:
-                if (pixelInfo != NULL):
-                    x = pixelInfo.coords[0]
-                    y = pixelInfo.coords[1]
-                    shortDate = pixelInfo.getShortDate()
-                    # only hold the pixel info if there's no entry or the entry is later
-                    if getDateTime(finalCanvasInfo, (x, y)) < shortDate:
-                        finalCanvasInfo[convertCoords((x, y))] = pixelInfo.colour
-                        finalCanvasInfo[convertCoords((x, y)) + 1] = shortDate
+            for x, v in pixelInfos.items():
+                for y, pixelInfo in v.items():
+                    if (pixelInfo != NULL):
+                        shortDate = pixelInfo.getShortDate()
+                        # only hold the pixel info if there's no entry or the entry is later
+                        if getDateTime(finalCanvasInfo, (x, y)) < shortDate:
+                            finalCanvasInfo[convertCoords((x, y))] = pixelInfo.colour
+                            finalCanvasInfo[convertCoords((x, y)) + 1] = shortDate
         
         pixelInfos.clear()
         # open file
