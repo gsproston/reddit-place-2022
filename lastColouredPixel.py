@@ -4,11 +4,11 @@ import ctypes
 from datetime import datetime
 import multiprocessing
 from multiprocessing import Value
-import os
 import time
 from alive_progress import alive_bar
 from PixelInfo import PixelInfo
 import constants as cs
+import fileUtils
 
 def getPixelInfo(infoStr):
     # parse out each field
@@ -33,18 +33,9 @@ def getPixelInfo(infoStr):
 
     return PixelInfo(date, userIdHash, colour, (x, y))
 
-def openNextFile(fileNum):
-    with fileNum.get_lock():
-        if fileNum.value > cs.MAX_FILE_NUM:
-            # silently exit
-            return None
-        fileName = os.path.join('input', cs.FILE_NAME + str(fileNum.value) + '.csv')
-        fileNum.value += 1
-    return open(fileName, 'r')
-
 def threadBody(fileNum, lastTimestamp):
     # open file
-    file = openNextFile(fileNum)
+    file = fileUtils.openNextFile(fileNum)
     lastTimestampTemp = 0.0
     while (file != None):
         # read header line
@@ -61,7 +52,7 @@ def threadBody(fileNum, lastTimestamp):
             line = file.readline()
         
         # open file
-        file = openNextFile(fileNum)
+        file = fileUtils.openNextFile(fileNum)
 
     with lastTimestamp.get_lock():
         if lastTimestampTemp > lastTimestamp.value:

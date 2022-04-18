@@ -4,13 +4,13 @@ import ctypes
 from datetime import datetime
 import multiprocessing
 from multiprocessing import Value, Array
-import os
 import time
 from PIL import Image
 import numpy as np
 from alive_progress import alive_bar
 from PixelInfo import PixelInfo
 import constants as cs
+import fileUtils
 
 def getPixelInfo(infoStr):
     # parse out each field
@@ -35,15 +35,6 @@ def getPixelInfo(infoStr):
 
     return PixelInfo(date, userIdHash, colour, (x, y))
 
-def openNextFile(fileNum):
-    with fileNum.get_lock():
-        if fileNum.value > cs.MAX_FILE_NUM:
-            # silently exit
-            return None
-        fileName = os.path.join('input', cs.FILE_NAME + str(fileNum.value) + '.csv')
-        fileNum.value += 1
-    return open(fileName, 'r')
-
 def convertCoords(coords):
     return 2 * (cs.CANVAS_DIM * coords[0] + coords[1])
 
@@ -52,7 +43,7 @@ def getDateTime(finalCanvasInfo, coords):
 
 def threadBody(fileNum, finalCanvasInfo):
     # open file
-    file = openNextFile(fileNum)
+    file = fileUtils.openNextFile(fileNum)
     # list of pixel infos
     pixelInfos = {}
     while (file != None):
@@ -87,7 +78,7 @@ def threadBody(fileNum, finalCanvasInfo):
         
         pixelInfos.clear()
         # open file
-        file = openNextFile(fileNum)
+        file = fileUtils.openNextFile(fileNum)
 
 def vMain():
     fileNum = Value(ctypes.c_uint8, 0)
