@@ -3,20 +3,12 @@ from audioop import mul
 import ctypes
 from datetime import datetime
 import multiprocessing
-from multiprocessing import Value, Array
+from multiprocessing import Value
 import os
 import time
-from typing import List
-from PIL import Image
-import numpy as np
 from alive_progress import alive_bar
 from PixelInfo import PixelInfo
-
-FILE_NAME = '2022_place_canvas_history'
-MAX_FILE_NUM = 160
-NUM_THREADS = 8
-# width and height of the canvas
-CANVAS_DIM = 2000
+import constants as cs
 
 def getPixelInfo(infoStr):
     # parse out each field
@@ -43,10 +35,10 @@ def getPixelInfo(infoStr):
 
 def openNextFile(fileNum):
     with fileNum.get_lock():
-        if fileNum.value > MAX_FILE_NUM:
+        if fileNum.value > cs.MAX_FILE_NUM:
             # silently exit
             return None
-        fileName = os.path.join('input', FILE_NAME + str(fileNum.value) + '.csv')
+        fileName = os.path.join('input', cs.FILE_NAME + str(fileNum.value) + '.csv')
         fileNum.value += 1
     return open(fileName, 'r')
 
@@ -81,14 +73,14 @@ def vMain():
 
     # start processes
     processes = []
-    for i in range(NUM_THREADS):
+    for i in range(cs.NUM_THREADS):
         process = multiprocessing.Process(target=threadBody, args=(fileNum, lastTimestamp))
         process.start()
         processes.append(process)
 
     fileCount = 0
-    with alive_bar(MAX_FILE_NUM) as bar:
-        while (fileCount < MAX_FILE_NUM):
+    with alive_bar(cs.MAX_FILE_NUM) as bar:
+        while (fileCount < cs.MAX_FILE_NUM):
             time.sleep(.1)
             with fileNum.get_lock():
                 while fileNum.value > fileCount:

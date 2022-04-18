@@ -6,18 +6,11 @@ import multiprocessing
 from multiprocessing import Value, Array
 import os
 import time
-from typing import List
 from PIL import Image
 import numpy as np
 from alive_progress import alive_bar
 from PixelInfo import PixelInfo
-
-FILE_NAME = '2022_place_canvas_history'
-MAX_FILE_NUM = 160
-NUM_THREADS = 8
-# width and height of the canvas
-CANVAS_DIM = 2000
-LAST_DATETIME = datetime(2022, 4, 4, 22, 47, 44)
+import constants as cs
 
 def getPixelInfo(infoStr):
     # parse out each field
@@ -44,15 +37,15 @@ def getPixelInfo(infoStr):
 
 def openNextFile(fileNum):
     with fileNum.get_lock():
-        if fileNum.value > MAX_FILE_NUM:
+        if fileNum.value > cs.MAX_FILE_NUM:
             # silently exit
             return None
-        fileName = os.path.join('input', FILE_NAME + str(fileNum.value) + '.csv')
+        fileName = os.path.join('input', cs.FILE_NAME + str(fileNum.value) + '.csv')
         fileNum.value += 1
     return open(fileName, 'r')
 
 def convertCoords(coords):
-    return 2 * (CANVAS_DIM * coords[0] + coords[1])
+    return 2 * (cs.CANVAS_DIM * coords[0] + coords[1])
 
 def getDateTime(finalCanvasInfo, coords):
     return finalCanvasInfo[convertCoords(coords) + 1]
@@ -74,7 +67,7 @@ def threadBody(fileNum, finalCanvasInfo):
             # set the pixel info in the array
             x = pixelInfo.coords[0]
             y = pixelInfo.coords[1]
-            if pixelInfo.date <= LAST_DATETIME:
+            if pixelInfo.date <= cs.LAST_DATETIME:
                 if (x not in pixelInfos):
                     pixelInfos[x] = dict([(y, pixelInfo)])
                 elif y not in pixelInfos[x] or pixelInfos[x][y].date < pixelInfo.date:
@@ -99,18 +92,18 @@ def threadBody(fileNum, finalCanvasInfo):
 def vMain():
     fileNum = Value(ctypes.c_uint8, 0)
     # init the canvas as white
-    finalCanvasInfo = Array(ctypes.c_uint32, [0] * CANVAS_DIM * CANVAS_DIM * 2)
+    finalCanvasInfo = Array(ctypes.c_uint32, [0] * cs.CANVAS_DIM * cs.CANVAS_DIM * 2)
 
     # start processes
     processes = []
-    for i in range(NUM_THREADS):
+    for i in range(cs.NUM_THREADS):
         process = multiprocessing.Process(target=threadBody, args=(fileNum, finalCanvasInfo))
         process.start()
         processes.append(process)
 
     fileCount = 0
-    with alive_bar(MAX_FILE_NUM) as bar:
-        while (fileCount < MAX_FILE_NUM):
+    with alive_bar(cs.MAX_FILE_NUM) as bar:
+        while (fileCount < cs.MAX_FILE_NUM):
             time.sleep(.1)
             with fileNum.get_lock():
                 while fileNum.value > fileCount:
@@ -122,9 +115,9 @@ def vMain():
         process.join()
 
     # create canvas of just pixels
-    finalCanvas = [ [(0xFF, 0xFF, 0xFF)] * CANVAS_DIM for i in range(CANVAS_DIM)]
-    for i in range(CANVAS_DIM):
-        for j in range(CANVAS_DIM):
+    finalCanvas = [ [(0xFF, 0xFF, 0xFF)] * cs.CANVAS_DIM for i in range(cs.CANVAS_DIM)]
+    for i in range(cs.CANVAS_DIM):
+        for j in range(cs.CANVAS_DIM):
             hexColour = finalCanvasInfo[convertCoords((i, j))]
             r = hexColour >> 16
             g = (hexColour >> 8) & 0xFF
