@@ -1,7 +1,7 @@
 import os
 
 FILE_NAME = '2022_place_canvas_history'
-MAX_FILE_NUM = 160
+MAX_FILE_NUM = 7
 
 def openNextFile(fileNum):
     with fileNum.get_lock():
