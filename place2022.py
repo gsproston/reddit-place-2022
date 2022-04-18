@@ -10,6 +10,7 @@ from typing import List
 from PIL import Image
 import numpy as np
 from alive_progress import alive_bar
+from PixelInfo import PixelInfo
 
 FILE_NAME = '2022_place_canvas_history'
 MAX_FILE_NUM = 160
@@ -17,18 +18,6 @@ NUM_THREADS = 8
 # width and height of the canvas
 CANVAS_DIM = 2000
 LAST_DATETIME = datetime(2022, 4, 4, 22, 47, 44)
-
-class PixelInfo:
-    def __init__(self, date, userIdHash, colour, coords):
-        self.date = date
-        self.userIdHash = userIdHash
-        self.colour = colour
-        self.coords = coords
-
-    def getShortDate(self):
-        startTime = datetime(2022, 4, 1, 0, 0, 0)
-        timestampDiff = self.date.timestamp() - startTime.timestamp()
-        return int(timestampDiff * 1000)
 
 def getPixelInfo(infoStr):
     # parse out each field
