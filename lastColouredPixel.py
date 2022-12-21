@@ -13,24 +13,26 @@ import pixelUtils
 
 def threadBody(fileNum, lastTimestamp):
     # open file
-    file = fileUtils.openNextFile(fileNum)
+    pathToFile = fileUtils.openNextFile(fileNum)
     lastTimestampTemp = 0.0
-    while (file != None):
-        # read header line
-        line = file.readline()
-        # read first line of data
-        line = file.readline()
-
-        while len(line) > 0:
-            # get the pixel info object from the line
-            pixelInfo = pixelUtils.getPixelInfo(line)
-            if pixelInfo.colour != 0xFFFFFF and lastTimestampTemp < pixelInfo.date.timestamp():
-                lastTimestampTemp = pixelInfo.date.timestamp()
-            # read the next line
+    while (pathToFile != None):
+        # open the file
+        with open(pathToFile, 'r') as file:
+            # ignore header line
             line = file.readline()
-        
-        # open file
-        file = fileUtils.openNextFile(fileNum)
+            # read first line of data
+            line = file.readline()
+
+            while len(line) > 0:
+                # get the pixel info object from the line
+                pixelInfo = pixelUtils.getPixelInfo(line)
+                if pixelInfo.colour != 0xFFFFFF and lastTimestampTemp < pixelInfo.date.timestamp():
+                    lastTimestampTemp = pixelInfo.date.timestamp()
+                # read the next line
+                line = file.readline()
+            
+        # get path to the next file
+        pathToFile = fileUtils.openNextFile(fileNum)
 
     with lastTimestamp.get_lock():
         if lastTimestampTemp > lastTimestamp.value:

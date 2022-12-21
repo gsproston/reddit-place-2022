@@ -19,48 +19,50 @@ def getDateTime(finalCanvasInfo, coords):
     return finalCanvasInfo[convertCoords(coords) + 1]
 
 def threadBody(fileNum, finalCanvasInfo, processedFiles):
-    # open file
-    file = fileUtils.openNextFile(fileNum)
+    # get path to next file
+    pathToFile = fileUtils.getPathToNextFile(fileNum)
     # list of pixel infos
     pixelInfos = {}
-    while (file != None):
-        # read header line
-        line = file.readline()
-        # read first line of data
-        line = file.readline()
-
-        while len(line) > 0:
-            # get the pixel info object from the line
-            pixelInfo = pixelUtils.getPixelInfo(line)
-            # set the pixel info in the array
-            x = pixelInfo.coords[0]
-            y = pixelInfo.coords[1]
-            if pixelInfo.date <= cs.LAST_DATETIME:
-                if (x not in pixelInfos):
-                    pixelInfos[x] = dict([(y, pixelInfo)])
-                elif y not in pixelInfos[x] or pixelInfos[x][y].date < pixelInfo.date:
-                    pixelInfos[x][y] = pixelInfo
-            # read the next line
+    while (pathToFile != None):
+        # open the file
+        with open(pathToFile, 'r') as file:
+            # ignore header line
+            line = file.readline()
+            # read first line of data
             line = file.readline()
 
-        # end of file
-        # combine processed data into shared memory
-        with finalCanvasInfo.get_lock():
-            for x, v in pixelInfos.items():
-                for y, pixelInfo in v.items():
-                    if (pixelInfo != NULL):
-                        shortDate = pixelInfo.getShortDate()
-                        # only hold the pixel info if there's no entry or the entry is later
-                        if getDateTime(finalCanvasInfo, (x, y)) < shortDate:
-                            finalCanvasInfo[convertCoords((x, y))] = pixelInfo.colour
-                            finalCanvasInfo[convertCoords((x, y)) + 1] = shortDate
-        
-        # record that we've processed this file
-        with processedFiles.get_lock():
-            processedFiles.value += 1
-        pixelInfos.clear()
-        # open next file file
-        file = fileUtils.openNextFile(fileNum)
+            while len(line) > 0:
+                # get the pixel info object from the line
+                pixelInfo = pixelUtils.getPixelInfo(line)
+                # set the pixel info in the array
+                x = pixelInfo.coords[0]
+                y = pixelInfo.coords[1]
+                if pixelInfo.date <= cs.LAST_DATETIME:
+                    if (x not in pixelInfos):
+                        pixelInfos[x] = dict([(y, pixelInfo)])
+                    elif y not in pixelInfos[x] or pixelInfos[x][y].date < pixelInfo.date:
+                        pixelInfos[x][y] = pixelInfo
+                # read the next line
+                line = file.readline()
+
+            # end of file
+            # combine processed data into shared memory
+            with finalCanvasInfo.get_lock():
+                for x, v in pixelInfos.items():
+                    for y, pixelInfo in v.items():
+                        if (pixelInfo != NULL):
+                            shortDate = pixelInfo.getShortDate()
+                            # only hold the pixel info if there's no entry or the entry is later
+                            if getDateTime(finalCanvasInfo, (x, y)) < shortDate:
+                                finalCanvasInfo[convertCoords((x, y))] = pixelInfo.colour
+                                finalCanvasInfo[convertCoords((x, y)) + 1] = shortDate
+            
+            # record that we've processed this file
+            with processedFiles.get_lock():
+                processedFiles.value += 1
+            pixelInfos.clear()
+        # get path to next file
+        pathToFile = fileUtils.getPathToNextFile(fileNum)
 
 def vMain():
     # file number to open next
