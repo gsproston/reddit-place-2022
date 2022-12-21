@@ -8,13 +8,11 @@ Datasets can be found from this Reddit post: https://www.reddit.com/r/place/comm
 
 Finds the location and datetime of the last pixel that was coloured before only white could be used.
 
-Outputs into `last coloured pixel.txt`
-
 ## place2022.py
 
 Generates the final canvas.
 
-Uses the input files in `input/` and generates the final canvas as a png at `finalCanvas.png`
+Uses the input files in `input/` and generates the final canvas as a png at `output/finalCanvas.png`
 
 ## splitFiles.py
 

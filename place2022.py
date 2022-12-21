@@ -3,6 +3,7 @@ from audioop import mul
 import ctypes
 import multiprocessing
 from multiprocessing import Value, Array
+import os
 import time
 from PIL import Image
 import numpy as np
@@ -111,7 +112,8 @@ def vMain():
         array = np.array(finalCanvas, dtype=np.uint8)
         # Use PIL to create an image from the new array of pixels
         finalImage = Image.fromarray(array)
-        finalImage.save('finalCanvas.png')
+        savePath = os.path.join('output', 'finalCanvas.png')
+        finalImage.save(savePath)
         bar()
 
 if __name__ == "__main__":
